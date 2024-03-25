@@ -1,0 +1,25 @@
+name: Regenerate resources
+
+on: [push]      
+     
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        
+      - name: Download files
+        shell: bash
+        run: |
+          caches_data=$(curl -s https://archive.openrs2.org/caches.json)
+          filtered_data=$(echo "$caches_data" | jq '.[] | select(.scope == "runescape" and .game == "oldschool" and .environment == "live")')
+          sorted_data=$(echo "$filtered_data" | jq -c 'select(.timestamp != null) | {timestamp: .timestamp, data: .}' | jq -s 'sort_by(.timestamp) | reverse')
+          id=$(echo $sorted_data | jq -r '.[0].data.id')
+          echo "Latest cache version ID: $id"
+          zip_url="https://archive.openrs2.org/caches/runescape/$id/disk.zip"
+          echo "Downloading $zip_url"
+          curl -s -o "disk.zip" "$zip_url"
+          keys_url="https://archive.openrs2.org/caches/runescape/$id/keys.json"
+          echo "Downloading $keys_url"
+          curl -s -o "keys.json" "$keys_url"
+          echo "Download completed."
